@@ -3,7 +3,7 @@ name: NSE Corporate Filings Pipeline
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 3-10 * * 1-5'
+    - cron: '0 * * * 1-5'
 
 # 1. CRITICAL: Grant the workflow permission to push commits
 permissions:
