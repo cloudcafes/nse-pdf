@@ -37,7 +37,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          python nse_pipeline.py
+          python announcement.py
 
       # 2. Commit the database back to the repository
       - name: Commit and Push Database State
