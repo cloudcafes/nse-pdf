@@ -5,30 +5,31 @@ import fitz  # PyMuPDF
 from datetime import datetime
 from curl_cffi import requests as cffi_requests
 import requests  # Standard requests for Telegram API
-import google.generativeai as genai
+from google import genai 
 
 # ==============================
 # API KEYS & CONFIGURATION
 # ==============================
 GEMINI_API_KEY     = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL       = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID   = os.getenv("TELEGRAM_CHAT_ID")
-GEMINI_MODEL       = "gemini-3.1-flash-lite-preview"
 
 DB_NAME = "nse_pipeline.db"
 BASE_URL = "https://www.nseindia.com"
 ARCHIVE_URL = "https://nsearchives.nseindia.com"
 ANALYSIS_FILE = "latest-analysis.txt"
+TARGET_STOCKS_FILE = "stocks.txt"
 
-# Configure Gemini
+# Configure New Gemini SDK
+client = None
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel(GEMINI_MODEL)
+    client = genai.Client(api_key=GEMINI_API_KEY)
 else:
-    print("[!] WARNING: GEMINI_API_KEY is not set.")
+    print("[!] WARNING: GEMINI_API_KEY is not set. AI Analysis will fail automatically.")
 
 # ==========================================
-# 1. DATABASE & EXTRACTION COMPONENT
+# 1. DATABASE, FILTERING, & EXTRACTION 
 # ==========================================
 
 def init_db():
@@ -46,6 +47,16 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
+
+def load_target_stocks(filename=TARGET_STOCKS_FILE):
+    """Loads the allowed stocks from a text file into an efficient Set."""
+    if not os.path.exists(filename):
+        print(f"[!] WARNING: '{filename}' not found. No AI analysis will run.")
+        return set()
+        
+    with open(filename, "r", encoding="utf-8") as f:
+        # Reads lines, removes spaces, converts to UPPERCASE, ignores blank lines
+        return set(line.strip().upper() for line in f if line.strip())
 
 def extract_pdf_text(filepath):
     print(f"    [PROCESS] Extracting text from {os.path.basename(filepath)}...")
@@ -104,9 +115,10 @@ def print_db_summary():
         print("\n--- LLM Processing Status ---")
         cursor.execute("SELECT llm_status, COUNT(*) FROM report_pipeline GROUP BY llm_status")
         status_dict = {status: count for status, count in cursor.fetchall()}
-        print(f"  ✅ SUCCESS (Analyzed): {status_dict.get('SUCCESS', 0)}")
-        print(f"  ⏳ PENDING (Waiting):  {status_dict.get('PENDING', 0)}")
-        print(f"  ❌ FAILED  (Errors):   {status_dict.get('FAILED', 0)}")
+        print(f"  ✅ SUCCESS (Analyzed):      {status_dict.get('SUCCESS', 0)}")
+        print(f"  ⏭️ SKIPPED (Not in Target): {status_dict.get('SKIPPED', 0)}")
+        print(f"  ⏳ PENDING (Waiting):       {status_dict.get('PENDING', 0)}")
+        print(f"  ❌ FAILED  (Errors):        {status_dict.get('FAILED', 0)}")
     except Exception as e:
         pass
     print("="*50 + "\n")
@@ -116,9 +128,9 @@ def print_db_summary():
 # 2. AI & TELEGRAM INTEGRATION
 # ==========================================
 
-def analyze_with_gemini(symbol, pdf_text):
-    """Sends the extracted text to Gemini using the strict Prompt."""
-    if not GEMINI_API_KEY:
+def analyze_with_gemini(symbol, pdf_text, max_retries=2):
+    """Sends extracted text to Gemini, with automatic retry logic on failure."""
+    if not client:
         return False, "API Key Missing"
         
     prompt = f"""You are a professional equity research analyst specializing in event-driven trading strategies.
@@ -165,37 +177,38 @@ Potential: <VERYHIGH | HIGH | LOW | IGNORE | NA>
 <<<
 {pdf_text}
 >>>"""
-    try:
-        response = model.generate_content(prompt)
-        return True, response.text.strip()
-    except Exception as e:
-        print(f"    [X] Gemini API Error: {e}")
-        return False, str(e)
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt
+            )
+            return True, response.text.strip()
+        except Exception as e:
+            print(f"    [!] AI Warning: API Error on attempt {attempt} for {symbol} -> {e}")
+            if attempt < max_retries:
+                print("    [*] Retrying in 3 seconds...")
+                time.sleep(3)
+            else:
+                print(f"    [X] Max retries reached for {symbol}. Continuing to next file.")
+                return False, str(e)
 
 def send_telegram_message(content):
-    """Sends direct text content to Telegram, chunking if necessary."""
-    if not content:
-        return
-        
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("[!] Missing Telegram Credentials. Skipping message send.")
-        return
+    if not content: return
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID: return
         
     print("    [TELEGRAM] Dispatching alert...")
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     
-    # Telegram max message length is 4096 chars. Safely chunking at 4000.
     chunks = [content[i:i+4000] for i in range(0, len(content), 4000)]
-    
     for chunk in chunks:
         payload = {"chat_id": TELEGRAM_CHAT_ID, "text": chunk}
         try:
-            response = requests.post(url, json=payload)
-            if response.status_code != 200:
-                print(f"    [X] Telegram failed: {response.text}")
+            requests.post(url, json=payload)
         except Exception as e:
             print(f"    [X] Telegram request error: {e}")
-        time.sleep(1) # Prevent Telegram API rate limits
+        time.sleep(1)
 
 # ==========================================
 # 3. CORE PIPELINE WORKFLOW
@@ -203,11 +216,15 @@ def send_telegram_message(content):
 
 def run_pipeline():
     init_db()
+    
+    # Load the targeted stocks list
+    target_stocks = load_target_stocks()
+    print(f"[SYSTEM] Loaded {len(target_stocks)} target stocks from {TARGET_STOCKS_FILE}.")
+
     today_str = datetime.now().strftime("%d-%m-%Y")
     download_dir = f"NSE_Reports_{today_str}"
     os.makedirs(download_dir, exist_ok=True)
     
-    # Secure session initialization
     session = cffi_requests.Session(impersonate="chrome120")
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -215,7 +232,6 @@ def run_pipeline():
     })
     
     print(f"\n[SYSTEM] Starting pipeline for {today_str}...")
-    print("[SYSTEM] Fetching session cookies & API Data...")
     try:
         session.get(BASE_URL, timeout=15)
         time.sleep(2)
@@ -234,6 +250,10 @@ def run_pipeline():
         if att_path:
             att_path_str = str(att_path).strip()
             if '.pdf' in att_path_str.lower() or '/corporate/' in att_path_str.lower():
+                
+                if '.zip' in att_path_str.lower():
+                    continue
+
                 pdf_url = att_path_str if att_path_str.startswith("http") else f"{ARCHIVE_URL}{att_path_str}"
                 safe_filename = att_path_str.split('/')[-1].split('?')[0] 
                 if not safe_filename.lower().endswith('.pdf'): safe_filename += ".pdf"
@@ -268,31 +288,38 @@ def run_pipeline():
     if unprocessed:
         print(f"\n[SYSTEM] Found {len(unprocessed)} files ready for AI analysis...")
         
-        # Clear out the old analysis file for this run
         if os.path.exists(ANALYSIS_FILE):
             os.remove(ANALYSIS_FILE)
             
-        success_count = 0
         for filepath, symbol, pdf_text in unprocessed:
+            
+            # --- NEW LOGIC: Target Stock Filter ---
+            if symbol.upper() not in target_stocks:
+                print(f"  [SKIP] {symbol} is not in {TARGET_STOCKS_FILE}. Ignoring AI Analysis.")
+                # Mark as SKIPPED so it leaves the pending queue forever
+                update_llm_status(filepath, 'SKIPPED')
+                continue
+            # --------------------------------------
+
             print(f"  [AI] Querying Gemini for {symbol}...")
             
             success, result = analyze_with_gemini(symbol, pdf_text)
             
             if success:
-                # 1. Save to the text file for logging
                 with open(ANALYSIS_FILE, "a", encoding="utf-8") as f:
                     f.write(f"{result}\n\n{'='*40}\n\n")
                     
-                # 2. Update the SQLite Database
                 update_llm_status(filepath, 'SUCCESS', result)
-                success_count += 1
                 
-                # 3. Fire to Telegram IMMEDIATELY
-                send_telegram_message(result)
+                result_upper = result.upper()
+                if "POTENTIAL: HIGH" in result_upper or "POTENTIAL: VERYHIGH" in result_upper or "POTENTIAL: VERY HIGH" in result_upper:
+                    send_telegram_message(result)
+                else:
+                    print("    [SKIP] Telegram alert bypassed (Potential not High/VeryHigh).")
+                    
             else:
                 update_llm_status(filepath, 'FAILED')
                 
-            # Rate limit protection for Gemini API
             time.sleep(3) 
             
     else:
