@@ -1,0 +1,357 @@
+Company Name: Eris Lifesciences Limited
+Reason to Trade: Regulatory non-compliance observations at manufacturing units will delay the commercialization of the company's EU-CDMO product pipeline, acting as a negative catalyst.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Bank of Maharashtra
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: RailTel Corporation of India Ltd.
+Reason to Trade: The company secured a significant order worth ~INR 86.36 Cr from the Municipal Corporation of Greater Mumbai for Cloud Services, which provides a positive revenue visibility signal.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: CRISIL Limited
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: GOCL Corporation Limited
+Reason to Trade: The company faces a restrictive order from the Endowment Tribunal regarding the alienation of land; however, management has publicly stated they do not expect a material adverse impact, likely muting market volatility.
+Date: 20-04-2026
+Potential: LOW
+
+========================================
+
+Company Name: UGRO Capital Limited
+Reason to Trade: The company reported strong financial growth (26% YoY PAT increase) and confirmed that all strategic restructuring objectives—including a shift to high-yield segments and a commitment to no equity dilution through FY29—are on track.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Axita Cotton Limited
+Reason to Trade: The company reported its audited annual financial results and declared a final dividend of Rs. 0.05 per equity share, which may trigger short-term market interest.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Axita Cotton Limited
+Reason to Trade: The company reported audited annual financial results and declared a final dividend of Rs. 0.05 per share.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Veloxis Pharmaceuticals (via Asahi Kasei Corporation)
+Reason to Trade: Asahi Kasei has finalized the acquisition of Veloxis Pharmaceuticals for $1.3 billion. The deal is completed; no further alpha is expected from this event.
+Date: 04-03-2020
+Potential: IGNORE
+
+========================================
+
+Company Name: Indosolar Limited
+Reason to Trade: The company reported robust annual growth with a 350% increase in PAT and 185% increase in EBITDA for FY26, signaling a successful business turnaround that is likely to drive positive market sentiment.
+Date: 20-04-2026
+Potential: VERYHIGH
+
+========================================
+
+Company Name: 360 ONE WAM LIMITED
+Reason to Trade: The acquisition of Quark Solar is a small-cap tuck-in deal (~INR 9.38 crore) to support the firm's renewable energy fund strategy; it is unlikely to have a material impact on the stock price.
+Date: 20-04-2026
+Potential: LOW
+
+========================================
+
+Company Name: Spacenet Enterprises India Limited
+Reason to Trade: The company is divesting a 2.58% stake in String Metaverse Limited via an Offer for Sale (OFS) to achieve minimum public shareholding, which may lead to short-term liquidity movements in the subsidiary's valuation and minor capital inflow for the parent.
+Date: 20-04-2026
+Potential: LOW
+
+========================================
+
+Company Name: Spacenet Enterprises India Limited
+Reason to Trade: The company, as a promoter of String Metaverse Limited (SML), has announced an Offer for Sale (OFS) of 3.27% of SML's equity to meet minimum public shareholding requirements. The event may cause volatility in SML's stock price due to the supply increase and the floor price set at INR 66.00.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Oberoi Realty Limited
+Reason to Trade: The company reported a significant QoQ and YoY jump in gross booking value (Rs. 1,673 Cr vs Rs. 836 Cr in Q3FY26), indicating strong sales momentum and positive operational performance.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Vishal Mega Mart Limited
+Reason to Trade: The company received a minor regulatory penalty of Rs. 4 Lakh for food safety violations; the financial impact is negligible and does not affect core operations.
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: Sutlej Textiles and Industries Limited
+Reason to Trade: Shareholders approved the Employee Stock Option Scheme (ESOS) 2026 via postal ballot. This is a routine governance update that typically carries negligible impact on short-term stock price action.
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: AU Small Finance Bank Limited
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: UGRO Capital Limited
+Reason to Trade: The board approved the issuance of non-convertible debentures (NCDs) worth up to ₹3,000 crores, which represents a significant capital-raising event for the NBFC's expansion.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: PDS Limited
+Reason to Trade: The company disclosed an ongoing legal investigation into suspected financial misconduct involving a former employee of a subsidiary, with a potential exposure of approximately ₹20.15 Cr. This creates negative sentiment regarding internal controls and potential financial write-offs.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Choice International Limited
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: UGRO CAPITAL LIMITED
+Reason to Trade: The company reported a significant increase in total income and approved a large debt issuance of up to Rs. 3,000 crores to support growth, alongside a management reappointment and change in statutory auditors.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: PNB Housing Finance Limited
+Reason to Trade: The company reported strong Q4 FY26 results with a 19% YoY growth in annual retail disbursements, significant asset quality improvement (GNPA below 1% at 0.93%), and a robust increase in annual net profit to INR 2,291 crore, signaling strong fundamental momentum.
+Date: 20-04-2026
+Potential: VERYHIGH
+
+========================================
+
+Company Name: Adani Ports and Special Economic Zone Ltd
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: ICICI Lombard General Insurance Company Limited
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: Biocon Limited
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: Tips Music Limited
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: Billionbrains Garage Ventures Limited
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: HCL Technologies Ltd.
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: Indbank Merchant Banking Services Limited
+Reason to Trade: The company reported annual audited financial results with an unmodified audit opinion; however, the results contain significant "Emphasis of Matter" notes regarding ongoing tax litigation (Rs 1842.78 Lakhs) and write-offs, which represent standard compliance disclosures rather than a catalyst for immediate alpha.
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: Bandhan Bank Limited
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: UGRO CAPITAL LIMITED
+Reason to Trade: The company reported a significant capital raise via NCDs (up to Rs. 3,000 crores) and approved a change in statutory auditors, signaling aggressive growth plans and balance sheet expansion.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: AVG Logistics Limited
+Reason to Trade: The company has incorporated a 50:50 Joint Venture with Baidyanath LNG to enter the LNG logistics space, which could signal future revenue diversification; however, the lack of operational details limits immediate impact.
+Date: 20-04-2026
+Potential: LOW
+
+========================================
+
+Company Name: Persistent Systems Limited
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: PNB Housing Finance Limited
+Reason to Trade: The company reported strong FY26 results with an 18.3% increase in PAT, asset quality improvement (GNPA sub-1%), and a dividend declaration of INR 8 per share. This combination of double-digit profit growth and improving asset quality is a positive catalyst for the stock.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: PNB Housing Finance Limited
+Reason to Trade: The company reported strong financial performance for the quarter and year ended March 31, 2026, showing significant growth in net profit and declaring a final dividend of INR 8/- per share, which likely exceeds investor expectations.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Ravindra Energy Limited
+Reason to Trade: The company's 49.5% associate, Energy in Motion, signed an MoU to deploy 1,000 heavy-duty electric trucks, signaling significant business scale-up potential for its clean mobility venture.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Manorama Industries Limited
+Reason to Trade: Shareholders approved a special resolution to raise up to INR 500 crore via Qualified Institutions Placement (QIP) or other permissible modes, which may lead to equity dilution.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: 360 ONE WAM LIMITED
+Reason to Trade: Approval from IFSCA to operate as a Fund Management Entity (Retail) at GIFT City expands the company’s business footprint and revenue potential in the offshore market.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Steel Exchange India Limited
+Reason to Trade: The company raised ~Rs 75 crore via preferential allotment of convertible warrants to non-promoters, signaling external capital infusion and potential future equity expansion.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Dhampur Bio Organics Ltd.
+Reason to Trade: The company announced the divestment of its Meerganj sugar unit for INR 305 crore, a move aimed at debt reduction and focusing on higher-margin segments, which is typically viewed as a positive catalyst for balance sheet health.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Coal India Limited
+Reason to Trade: The company is striking off its wholly owned subsidiary, CIL Solar PV Ltd. This is a routine corporate restructuring/winding-up of a dormant or non-operational subsidiary with no material impact on consolidated financials.
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: Hindustan Copper Limited
+Reason to Trade: The company announced a major "Vision 2030" roadmap involving a INR 7,188.60 Cr capex plan for mine expansion and significant production capacity ramps, signaling long-term growth and operational transformation.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Cholamandalam Investment and Finance Company Limited
+Reason to Trade: The issuance of shares via ESOP exercise is a routine corporate action that results in negligible dilution and does not represent a material market-moving event.
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: PNB Housing Finance Limited
+Reason to Trade: The company reported strong financial results for the quarter and year ended March 31, 2026, and recommended a final dividend of INR 8/- per equity share, which is a significant increase from the previous year.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Deepak Fertilisers and Petrochemicals Corporation Limited
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: Union Bank of India
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: TVS Motor Company
+Reason to Trade: The company's expansion into the Zambian market with a multi-product portfolio strengthens its international growth strategy and export revenue potential in the African region.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: PNB Housing Finance Limited
+Reason to Trade: The company reported strong financial performance with an increase in Net Profit After Tax to INR 2,291.24 crore for FY26 (vs 1,936.14 crore in FY25) and recommended a higher final dividend of INR 8 per share (vs 5 in previous year).
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
+Company Name: Unicommerce eSolutions Ltd.
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: Snowman Logistics Ltd.
+Reason to Trade: NA
+Date: 20-04-2026
+Potential: IGNORE
+
+========================================
+
+Company Name: Dhampur Bio Organics Ltd.
+Reason to Trade: The company announced the divestment of its Meerganj sugar unit for INR 305 crore, a move aimed at debt reduction and focusing on high-margin businesses. Additionally, it is forming a JV for functional food products, signaling a strategic shift in product mix.
+Date: 20-04-2026
+Potential: HIGH
+
+========================================
+
