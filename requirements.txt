@@ -1,0 +1,6 @@
+curl-cffi
+google-generativeai
+PyMuPDF
+requests
+urllib3
+google-genai

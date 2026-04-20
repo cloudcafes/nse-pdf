@@ -21,8 +21,11 @@ ARCHIVE_URL = "https://nsearchives.nseindia.com"
 ANALYSIS_FILE = "latest-analysis.txt"
 
 # Configure Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel(GEMINI_MODEL)
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel(GEMINI_MODEL)
+else:
+    print("[!] WARNING: GEMINI_API_KEY is not set.")
 
 # ==========================================
 # 1. DATABASE & EXTRACTION COMPONENT
@@ -115,6 +118,9 @@ def print_db_summary():
 
 def analyze_with_gemini(symbol, pdf_text):
     """Sends the extracted text to Gemini using the strict Prompt."""
+    if not GEMINI_API_KEY:
+        return False, "API Key Missing"
+        
     prompt = f"""You are a professional equity research analyst specializing in event-driven trading strategies.
 Your task is to analyze a corporate announcement and determine whether it creates a short-term trading opportunity.
 You MUST extract and infer the following fields:
@@ -166,18 +172,16 @@ Potential: <VERYHIGH | HIGH | LOW | IGNORE | NA>
         print(f"    [X] Gemini API Error: {e}")
         return False, str(e)
 
-def send_telegram_message(filepath):
-    """Reads the analysis file and sends it to Telegram, chunking if necessary."""
-    if not os.path.exists(filepath):
-        return
-        
-    with open(filepath, "r", encoding="utf-8") as f:
-        content = f.read().strip()
-        
+def send_telegram_message(content):
+    """Sends direct text content to Telegram, chunking if necessary."""
     if not content:
         return
         
-    print("[SYSTEM] Sending analysis to Telegram...")
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("[!] Missing Telegram Credentials. Skipping message send.")
+        return
+        
+    print("    [TELEGRAM] Dispatching alert...")
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     
     # Telegram max message length is 4096 chars. Safely chunking at 4000.
@@ -210,6 +214,7 @@ def run_pipeline():
         "Referer": f"{BASE_URL}/companies-listing/corporate-filings-announcements"
     })
     
+    print(f"\n[SYSTEM] Starting pipeline for {today_str}...")
     print("[SYSTEM] Fetching session cookies & API Data...")
     try:
         session.get(BASE_URL, timeout=15)
@@ -263,11 +268,10 @@ def run_pipeline():
     if unprocessed:
         print(f"\n[SYSTEM] Found {len(unprocessed)} files ready for AI analysis...")
         
-        # 1. Clear out the old analysis file for this run
+        # Clear out the old analysis file for this run
         if os.path.exists(ANALYSIS_FILE):
             os.remove(ANALYSIS_FILE)
             
-        # 2. Run the AI Loop
         success_count = 0
         for filepath, symbol, pdf_text in unprocessed:
             print(f"  [AI] Querying Gemini for {symbol}...")
@@ -275,21 +279,21 @@ def run_pipeline():
             success, result = analyze_with_gemini(symbol, pdf_text)
             
             if success:
-                # Append the strict output to our text file
+                # 1. Save to the text file for logging
                 with open(ANALYSIS_FILE, "a", encoding="utf-8") as f:
                     f.write(f"{result}\n\n{'='*40}\n\n")
                     
+                # 2. Update the SQLite Database
                 update_llm_status(filepath, 'SUCCESS', result)
                 success_count += 1
+                
+                # 3. Fire to Telegram IMMEDIATELY
+                send_telegram_message(result)
             else:
                 update_llm_status(filepath, 'FAILED')
                 
             # Rate limit protection for Gemini API
             time.sleep(3) 
-
-        # 3. Fire to Telegram
-        if success_count > 0:
-            send_telegram_message(ANALYSIS_FILE)
             
     else:
         print("\n[SYSTEM] No new documents pending AI analysis.")
