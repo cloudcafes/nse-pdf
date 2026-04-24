@@ -144,7 +144,7 @@ You MUST extract and infer the following fields:
    - Extract from the announcement or metadata
    - Format: DD-MM-YYYY
 4. Potential:
-   Classify into ONE of the following:
+   Classify into ONE of the following strictly based on market expectations from the announcement and the actual announcement:
    - VERYHIGH → Major price-moving event (earnings surprise, M&A, large order win, regulatory approval, stake sale, etc.)
    - HIGH → Strong positive/negative signal but not transformational
    - LOW → Minor impact, informational
