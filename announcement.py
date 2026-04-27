@@ -133,41 +133,62 @@ def analyze_with_gemini(symbol, pdf_text, max_retries=2):
     if not client:
         return False, "API Key Missing"
         
-    prompt = f"""You are a professional equity research analyst specializing in event-driven trading strategies.
-Your task is to analyze a corporate announcement and determine whether it creates a short-term trading opportunity.
-You MUST extract and infer the following fields:
+    prompt = f"""You are a professional equity research analyst specializing in event-driven trading strategies (non-earnings based).
+Your task is to analyze a corporate announcement and determine whether it creates a short-term trading opportunity based ONLY on strategic/business events, NOT on earnings or financial performance.
+---
+### You MUST extract and infer the following fields:
 1. Company Name
 2. Reason to Trade:
-   - Explain in 1–2 concise lines WHY this announcement may impact stock price
-   - If no actionable insight → return "NA"
+    Explain in 1–2 concise lines WHY this announcement may impact stock price
+    Focus ONLY on event-driven triggers
+    If no actionable insight → return "NA"
 3. Date:
-   - Extract from the announcement or metadata
-   - Format: DD-MM-YYYY
+    Extract from the announcement or metadata
+    Format: DD-MM-YYYY
 4. Potential:
-   Classify into ONE of the following strictly based on market expectations from the announcement and the actual announcement:
-   - VERYHIGH → Major price-moving event (earnings surprise, M&A, large order win, regulatory approval, stake sale, etc.)
-   - HIGH → Strong positive/negative signal but not transformational
-   - LOW → Minor impact, informational
-   - IGNORE → Routine filings (compliance, disclosures, minor updates)
-   - NA → If unclear
+   Classify into ONE of the following based on expected market impact of the event:
+    VERYHIGH → Transformational or large-scale event
+     (e.g., major acquisition/takeover, very large order win, significant capex, strategic partnership with high impact)
+    HIGH → Strong positive/negative signal but not transformational
+     (e.g., moderate order win, small acquisition, expansion announcement, new business segment entry)
+    LOW → Minor or limited impact
+     (e.g., small contracts, routine expansion, non-material updates)
+    IGNORE → Routine/non-actionable disclosures
+     (e.g., compliance filings, board meeting notices, procedural updates, general clarifications)
+    NA → If unclear or insufficient information
 ---
-## Analysis Guidelines (IMPORTANT)
-- Focus ONLY on **market-moving signals**
-- Ignore boilerplate language
-- Detect:
-  - Earnings results (beat/miss)
-  - Large contracts/orders
-  - M&A / acquisitions
-  - Promoter activity
-  - Fundraising / dilution
-  - Regulatory actions
-  - Credit rating changes
-  - Guidance / outlook changes
-- DO NOT hallucinate
-- If information is insufficient → output NA fields
+### ⚠️ STRICT ANALYSIS GUIDELINES
+#### ✅ Focus ONLY on these event categories:
+ Capex / Expansion plans
+ Acquisition / Takeover / Merger
+ Order wins / Contracts
+ Strategic partnerships / JV
+ Business restructuring / divestment
+ New product / segment entry
+ Government approvals / licenses (business-impacting)
+ Large deal pipeline announcements
+ Regulatory approvals with business impact
+#### ❌ Explicitly IGNORE:
+ Earnings / results / financial performance
+ Revenue, profit, margins, EBITDA
+ Guidance based on financial metrics
+ Any ratio-based or valuation-based commentary
+ If the announcement is primarily financial → Potential = IGNORE
 ---
-## Output Format (STRICT — no extra text)
-Return ONLY in this format:
+### ⚙️ Evaluation Logic (Important)
+ Evaluate size, strategic importance, and scalability
+ Check if the event:
+   Changes future revenue visibility
+   Signals institutional interest
+   Indicates business expansion or consolidation
+ Avoid overrating vague MoUs or non-binding announcements
+ Penalize lack of numbers / deal size clarity
+---
+### 🚫 Anti-Hallucination Rule
+ Do NOT assume deal size or impact if not explicitly mentioned
+ If key details are missing → downgrade to LOW or NA
+---
+### 📤 Output Format (STRICT — no extra text)
 Company Name: <value>
 Reason to Trade: <value or NA>
 Date: <DD-MM-YYYY or NA>
