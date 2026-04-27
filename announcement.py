@@ -33,20 +33,37 @@ else:
 # ==========================================
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS report_pipeline (
-            filepath TEXT PRIMARY KEY,
-            symbol TEXT,
-            download_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            pdf_text TEXT, 
-            llm_status TEXT DEFAULT 'PENDING',
-            llm_summary TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS report_pipeline (
+                filepath TEXT PRIMARY KEY,
+                symbol TEXT,
+                download_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                pdf_text TEXT, 
+                llm_status TEXT DEFAULT 'PENDING',
+                llm_summary TEXT
+            )
+        ''')
+        conn.commit()
+
+def cleanup_database(days_to_keep=5):
+    """Deletes old records and physically shrinks the database file to keep Git commits small."""
+    if not os.path.exists(DB_NAME): return
+    
+    print(f"\n[SYSTEM] Cleaning up database (keeping last {days_to_keep} days)...")
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute(f"DELETE FROM report_pipeline WHERE download_time <= datetime('now', '-{days_to_keep} days')")
+            print(f"  [+] Deleted {cursor.rowcount} obsolete records.")
+            conn.commit()
+            
+        with sqlite3.connect(DB_NAME, isolation_level=None) as conn:
+            conn.execute("VACUUM")
+        print("  [+] Database vacuumed and optimized. File size minimized.")
+    except Exception as e:
+        print(f"  [X] Database cleanup failed: {e}")
 
 def load_target_stocks(filename=TARGET_STOCKS_FILE):
     """Loads the allowed stocks from a text file into an efficient Set."""
@@ -55,83 +72,53 @@ def load_target_stocks(filename=TARGET_STOCKS_FILE):
         return set()
         
     with open(filename, "r", encoding="utf-8") as f:
-        # Reads lines, removes spaces, converts to UPPERCASE, ignores blank lines
         return set(line.strip().upper() for line in f if line.strip())
 
 def extract_pdf_text(filepath):
     print(f"    [PROCESS] Extracting text from {os.path.basename(filepath)}...")
-    text_content = ""
     try:
         with fitz.open(filepath) as doc:
-            for page in doc:
-                text_content += page.get_text()
-        return text_content
+            return "".join(page.get_text() for page in doc)
     except Exception as e:
         print(f"    [X] PDF Extraction Failed: {e}")
         return None
 
-def register_download_and_text(filepath, symbol, pdf_text):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT OR IGNORE INTO report_pipeline (filepath, symbol, pdf_text, llm_status)
-        VALUES (?, ?, ?, 'PENDING')
-    ''', (filepath, symbol, pdf_text))
-    conn.commit()
-    conn.close()
-
-def get_pending_text_for_llm():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT filepath, symbol, pdf_text FROM report_pipeline 
-        WHERE llm_status IN ('PENDING', 'FAILED') AND pdf_text IS NOT NULL
-    ''')
-    results = cursor.fetchall()
-    conn.close()
-    return results
-
-def update_llm_status(filepath, status, summary=None):
-    conn = sqlite3.connect(DB_NAME)
+def update_llm_status(conn, filepath, status, summary=None):
     cursor = conn.cursor()
     if summary:
         cursor.execute('UPDATE report_pipeline SET llm_status = ?, llm_summary = ? WHERE filepath = ?', (status, summary, filepath))
     else:
         cursor.execute('UPDATE report_pipeline SET llm_status = ? WHERE filepath = ?', (status, filepath))
     conn.commit()
-    conn.close()
 
 def print_db_summary():
     if not os.path.exists(DB_NAME): return
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
     print("\n" + "="*50 + "\n📊 DATABASE PIPELINE SUMMARY\n" + "="*50)
     try:
-        cursor.execute("SELECT COUNT(*) FROM report_pipeline")
-        print(f"Total Documents Tracked: {cursor.fetchone()[0]}")
-        cursor.execute("SELECT COUNT(*) FROM report_pipeline WHERE pdf_text IS NOT NULL")
-        print(f"Documents with Extracted Text: {cursor.fetchone()[0]}")
-        
-        print("\n--- LLM Processing Status ---")
-        cursor.execute("SELECT llm_status, COUNT(*) FROM report_pipeline GROUP BY llm_status")
-        status_dict = {status: count for status, count in cursor.fetchall()}
-        print(f"  ✅ SUCCESS (Analyzed):      {status_dict.get('SUCCESS', 0)}")
-        print(f"  ⏭️ SKIPPED (Not in Target): {status_dict.get('SKIPPED', 0)}")
-        print(f"  ⏳ PENDING (Waiting):       {status_dict.get('PENDING', 0)}")
-        print(f"  ❌ FAILED  (Errors):        {status_dict.get('FAILED', 0)}")
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM report_pipeline")
+            print(f"Total Documents Tracked: {cursor.fetchone()[0]}")
+            cursor.execute("SELECT COUNT(*) FROM report_pipeline WHERE pdf_text IS NOT NULL")
+            print(f"Documents with Extracted Text: {cursor.fetchone()[0]}")
+            
+            print("\n--- LLM Processing Status ---")
+            cursor.execute("SELECT llm_status, COUNT(*) FROM report_pipeline GROUP BY llm_status")
+            status_dict = {status: count for status, count in cursor.fetchall()}
+            print(f"  ✅ SUCCESS (Analyzed):      {status_dict.get('SUCCESS', 0)}")
+            print(f"  ⏭️ SKIPPED (Not in Target): {status_dict.get('SKIPPED', 0)}")
+            print(f"  ⏳ PENDING (Waiting):       {status_dict.get('PENDING', 0)}")
+            print(f"  ❌ FAILED  (Errors):        {status_dict.get('FAILED', 0)}")
     except Exception as e:
         pass
     print("="*50 + "\n")
-    conn.close()
 
 # ==========================================
 # 2. AI & TELEGRAM INTEGRATION
 # ==========================================
 
 def analyze_with_gemini(symbol, pdf_text, max_retries=2):
-    """Sends extracted text to Gemini, with automatic retry logic on failure."""
-    if not client:
-        return False, "API Key Missing"
+    if not client: return False, "API Key Missing"
         
     prompt = f"""You are a professional equity research analyst specializing in event-driven trading strategies (non-earnings based).
 Your task is to analyze a corporate announcement and determine whether it creates a short-term trading opportunity based ONLY on strategic/business events, NOT on earnings or financial performance.
@@ -139,23 +126,23 @@ Your task is to analyze a corporate announcement and determine whether it create
 ### You MUST extract and infer the following fields:
 1. Company Name
 2. Reason to Trade:
-    Explain in 1–2 concise lines WHY this announcement may impact stock price
-    Focus ONLY on event-driven triggers
-    If no actionable insight → return "NA"
+   Explain in 1–2 concise lines WHY this announcement may impact stock price
+   Focus ONLY on event-driven triggers
+   If no actionable insight → return "NA"
 3. Date:
-    Extract from the announcement or metadata
-    Format: DD-MM-YYYY
+   Extract from the announcement or metadata
+   Format: DD-MM-YYYY
 4. Potential:
    Classify into ONE of the following based on expected market impact of the event:
-    VERYHIGH → Transformational or large-scale event
+   VERYHIGH → Transformational or large-scale event
      (e.g., major acquisition/takeover, very large order win, significant capex, strategic partnership with high impact)
-    HIGH → Strong positive/negative signal but not transformational
+   HIGH → Strong positive/negative signal but not transformational
      (e.g., moderate order win, small acquisition, expansion announcement, new business segment entry)
-    LOW → Minor or limited impact
+   LOW → Minor or limited impact
      (e.g., small contracts, routine expansion, non-material updates)
-    IGNORE → Routine/non-actionable disclosures
+   IGNORE → Routine/non-actionable disclosures
      (e.g., compliance filings, board meeting notices, procedural updates, general clarifications)
-    NA → If unclear or insufficient information
+   NA → If unclear or insufficient information
 ---
 ### ⚠️ STRICT ANALYSIS GUIDELINES
 #### ✅ Focus ONLY on these event categories:
@@ -216,8 +203,7 @@ Potential: <VERYHIGH | HIGH | LOW | IGNORE | NA>
                 return False, str(e)
 
 def send_telegram_message(content):
-    if not content: return
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID: return
+    if not content or not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID: return
         
     print("    [TELEGRAM] Dispatching alert...")
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -238,7 +224,6 @@ def send_telegram_message(content):
 def run_pipeline():
     init_db()
     
-    # Load the targeted stocks list
     target_stocks = load_target_stocks()
     print(f"[SYSTEM] Loaded {len(target_stocks)} target stocks from {TARGET_STOCKS_FILE}.")
 
@@ -264,21 +249,32 @@ def run_pipeline():
         return
 
     # --- PHASE 1: DOWNLOAD & EXTRACT ---
-    for item in data:
-        att_path = item.get("attchmntFile") or item.get("attchmntText") or item.get("att")
-        symbol = item.get("symbol", "UNKNOWN")
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
         
-        if att_path:
-            att_path_str = str(att_path).strip()
-            if '.pdf' in att_path_str.lower() or '/corporate/' in att_path_str.lower():
-                
-                if '.zip' in att_path_str.lower():
-                    continue
+        for item in data:
+            symbol = item.get("symbol", "UNKNOWN").upper()
+            
+            # Skip if not in target list to save bandwidth and execution time
+            if target_stocks and symbol not in target_stocks:
+                continue
 
+            att_path = item.get("attchmntFile") or item.get("attchmntText") or item.get("att")
+            if not att_path: continue
+            
+            att_path_str = str(att_path).strip()
+            if '.zip' in att_path_str.lower(): continue
+                
+            if '.pdf' in att_path_str.lower() or '/corporate/' in att_path_str.lower():
                 pdf_url = att_path_str if att_path_str.startswith("http") else f"{ARCHIVE_URL}{att_path_str}"
                 safe_filename = att_path_str.split('/')[-1].split('?')[0] 
                 if not safe_filename.lower().endswith('.pdf'): safe_filename += ".pdf"
                 filepath = os.path.join(download_dir, f"{symbol}_{safe_filename}")
+                
+                # Avoid redundant downloads
+                cursor.execute('SELECT 1 FROM report_pipeline WHERE filepath = ?', (filepath,))
+                if cursor.fetchone():
+                    continue 
                 
                 if not os.path.exists(filepath):
                     print(f"\n  [DOWNLOAD] Fetching {symbol} -> {safe_filename}...")
@@ -288,64 +284,80 @@ def run_pipeline():
                             with open(filepath, 'wb') as f:
                                 f.write(pdf_response.content)
                             time.sleep(2) 
+                        else:
+                            continue
                     except Exception as e:
                         print(f"    [X] Request Error: {e}")
                         continue
                 
-                conn = sqlite3.connect(DB_NAME)
-                cursor = conn.cursor()
-                cursor.execute('SELECT 1 FROM report_pipeline WHERE filepath = ?', (filepath,))
-                already_in_db = cursor.fetchone()
-                conn.close()
-
-                if not already_in_db:
-                    extracted_text = extract_pdf_text(filepath)
-                    if extracted_text:
-                        register_download_and_text(filepath, symbol, extracted_text)
+                # Extract, insert, and delete PDF immediately
+                extracted_text = extract_pdf_text(filepath)
+                if extracted_text:
+                    cursor.execute('''
+                        INSERT OR IGNORE INTO report_pipeline (filepath, symbol, pdf_text, llm_status)
+                        VALUES (?, ?, ?, 'PENDING')
+                    ''', (filepath, symbol, extracted_text))
+                    conn.commit()
+                
+                try:
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
+                        print(f"    [CLEANUP] Deleted {safe_filename} to save runner disk space.")
+                except Exception:
+                    pass
 
     # --- PHASE 2: LLM ANALYSIS & TELEGRAM ---
-    unprocessed = get_pending_text_for_llm()
+    alerted_symbols_this_run = set() # Track duplicates
     
-    if unprocessed:
-        print(f"\n[SYSTEM] Found {len(unprocessed)} files ready for AI analysis...")
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT filepath, symbol, pdf_text FROM report_pipeline 
+            WHERE llm_status IN ('PENDING', 'FAILED') AND pdf_text IS NOT NULL
+        ''')
+        unprocessed = cursor.fetchall()
         
-        if os.path.exists(ANALYSIS_FILE):
-            os.remove(ANALYSIS_FILE)
+        if unprocessed:
+            print(f"\n[SYSTEM] Found {len(unprocessed)} files ready for AI analysis...")
             
-        for filepath, symbol, pdf_text in unprocessed:
-            
-            # --- NEW LOGIC: Target Stock Filter ---
-            if symbol.upper() not in target_stocks:
-                print(f"  [SKIP] {symbol} is not in {TARGET_STOCKS_FILE}. Ignoring AI Analysis.")
-                # Mark as SKIPPED so it leaves the pending queue forever
-                update_llm_status(filepath, 'SKIPPED')
-                continue
-            # --------------------------------------
-
-            print(f"  [AI] Querying Gemini for {symbol}...")
-            
-            success, result = analyze_with_gemini(symbol, pdf_text)
-            
-            if success:
-                with open(ANALYSIS_FILE, "a", encoding="utf-8") as f:
-                    f.write(f"{result}\n\n{'='*40}\n\n")
-                    
-                update_llm_status(filepath, 'SUCCESS', result)
+            if os.path.exists(ANALYSIS_FILE):
+                os.remove(ANALYSIS_FILE)
                 
-                result_upper = result.upper()
-                if "POTENTIAL: HIGH" in result_upper or "POTENTIAL: VERYHIGH" in result_upper or "POTENTIAL: VERY HIGH" in result_upper:
-                    send_telegram_message(result)
+            for filepath, symbol, pdf_text in unprocessed:
+                
+                if symbol.upper() not in target_stocks:
+                    print(f"  [SKIP] {symbol} is not in target list. Ignoring AI Analysis.")
+                    update_llm_status(conn, filepath, 'SKIPPED')
+                    continue
+
+                print(f"  [AI] Querying Gemini for {symbol}...")
+                success, result = analyze_with_gemini(symbol, pdf_text)
+                
+                if success:
+                    with open(ANALYSIS_FILE, "a", encoding="utf-8") as f:
+                        f.write(f"{result}\n\n{'='*40}\n\n")
+                        
+                    update_llm_status(conn, filepath, 'SUCCESS', result)
+                    
+                    result_upper = result.upper()
+                    if "POTENTIAL: HIGH" in result_upper or "POTENTIAL: VERYHIGH" in result_upper or "POTENTIAL: VERY HIGH" in result_upper:
+                        if symbol not in alerted_symbols_this_run:
+                            send_telegram_message(result)
+                            alerted_symbols_this_run.add(symbol)
+                        else:
+                            print(f"    [SKIP] Already sent an alert for {symbol} in this run. Suppressing duplicate.")
+                    else:
+                        print("    [SKIP] Telegram alert bypassed (Potential not High/VeryHigh).")
                 else:
-                    print("    [SKIP] Telegram alert bypassed (Potential not High/VeryHigh).")
+                    update_llm_status(conn, filepath, 'FAILED')
                     
-            else:
-                update_llm_status(filepath, 'FAILED')
+                time.sleep(3) 
                 
-            time.sleep(3) 
-            
-    else:
-        print("\n[SYSTEM] No new documents pending AI analysis.")
+        else:
+            print("\n[SYSTEM] No new documents pending AI analysis.")
 
+    # --- PHASE 3: DATABASE MAINTENANCE ---
+    cleanup_database(days_to_keep=5)
     print_db_summary()
 
 if __name__ == "__main__":
