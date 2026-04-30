@@ -144,7 +144,12 @@ Your task is to analyze a corporate announcement and determine whether it create
             
     try:
         print("[BATCH] Uploading JSONL payload to Google servers...")
-        uploaded_file = client.files.upload(file=batch_filename)
+        
+        # ---> FIX APPLIED HERE: Added the mime_type configuration <---
+        uploaded_file = client.files.upload(
+            file=batch_filename,
+            config={'mime_type': 'application/jsonl'}
+        )
         
         print(f"[BATCH] Triggering execution for {len(unprocessed)} documents...")
         batch_job = client.batches.create(
