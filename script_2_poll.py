@@ -43,7 +43,6 @@ def process_batch_results(job_info, conn):
         output_file_name = job_info.dest.file_name
         print(f"[POLL] Downloading results from internal File API: {output_file_name}...")
         
-        # ---> FIX APPLIED HERE: Changed 'name=' to 'file=' to match GenAI SDK spec
         response_bytes = client.files.download(file=output_file_name)
         results_text = response_bytes.decode("utf-8")
             
@@ -54,26 +53,34 @@ def process_batch_results(job_info, conn):
             filepath = data.get("key")
             response_payload = data.get("response", {})
             
-            # Robust JSON extraction to prevent GitHub Action runner crashes
             if "candidates" in response_payload and response_payload["candidates"]:
                 try:
                     result_text = response_payload["candidates"][0]["content"]["parts"][0]["text"].strip()
                     cursor.execute("UPDATE report_pipeline SET llm_status = 'SUCCESS', llm_summary = ? WHERE filepath = ?", (result_text, filepath))
                     
-                    result_upper = result_text.upper()
-                    if "POTENTIAL: HIGH" in result_upper or "POTENTIAL: VERYHIGH" in result_upper:
-                        send_telegram_message(result_text)
+                    # Clean up markdown formatting (e.g., **Potential:** High) to ensure strict matching
+                    result_upper = result_text.upper().replace("*", "").replace(" ", "")
+                    
+                    # Check for High/Very High
+                    if "POTENTIAL:HIGH" in result_upper or "POTENTIAL:VERYHIGH" in result_upper:
+                        if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+                            print(f"    [!] ALERT BLOCKED for {filepath}: Telegram Token or Chat ID is missing in environment.")
+                        else:
+                            print(f"    [+] HIGH POTENTIAL DETECTED for {filepath}!")
+                            send_telegram_message(result_text)
+                    else:
+                        print(f"    [-] Skipped alert for {filepath}: Potential is LOW/IGNORE/NA.")
                         
                 except (KeyError, IndexError):
+                    print(f"    [X] Parsing Error for {filepath}.")
                     cursor.execute("UPDATE report_pipeline SET llm_status = 'FAILED', llm_summary = 'Parsing Error' WHERE filepath = ?", (filepath,))
             else:
-                # Typically hits here if the prompt was flagged by API safety filters
+                print(f"    [X] Blocked/Empty Response for {filepath}.")
                 cursor.execute("UPDATE report_pipeline SET llm_status = 'FAILED', llm_summary = 'Blocked/Empty Response' WHERE filepath = ?", (filepath,))
                 
-        # Close out the job loop so it is never checked again
         cursor.execute("UPDATE active_batches SET status = 'COMPLETED' WHERE job_id = ?", (job_info.name,))
         conn.commit()
-        print("[SUCCESS] Database updated and relevant alerts dispatched.")
+        print("[SUCCESS] Database updated and batch loop closed.")
         
     except Exception as e:
         print(f"[X] Result processing failed: {e}")
