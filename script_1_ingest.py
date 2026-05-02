@@ -3,7 +3,7 @@ import sqlite3
 import time
 import json
 import fitz  # PyMuPDF
-from datetime import datetime
+from datetime import datetime, timedelta
 from curl_cffi import requests as cffi_requests
 from google import genai 
 
@@ -145,7 +145,7 @@ Your task is to analyze a corporate announcement and determine whether it create
     try:
         print("[BATCH] Uploading JSONL payload to Google servers...")
         
-        # ---> FIX APPLIED HERE: Added the mime_type configuration <---
+        # MIME type fix to prevent GitHub Actions crash
         uploaded_file = client.files.upload(
             file=batch_filename,
             config={'mime_type': 'application/jsonl'}
@@ -180,18 +180,26 @@ Your task is to analyze a corporate announcement and determine whether it create
 def run_ingestion():
     init_and_migrate_db()
     target_stocks = load_target_stocks()
-    today_str = datetime.now().strftime("%d-%m-%Y")
+    
+    # Set up a 3-day lookback window to catch Friday/Weekend announcements
+    today = datetime.now()
+    start_date = today - timedelta(days=3)
+    
+    today_str = today.strftime("%d-%m-%Y")
+    start_date_str = start_date.strftime("%d-%m-%Y")
+    
     download_dir = f"NSE_Reports_{today_str}"
     os.makedirs(download_dir, exist_ok=True)
     
     session = cffi_requests.Session(impersonate="chrome120")
     session.headers.update({"User-Agent": "Mozilla/5.0", "Referer": f"{BASE_URL}"})
     
-    print(f"\n[SYSTEM] Starting ingestion pipeline for {today_str}...")
+    print(f"\n[SYSTEM] Fetching announcements from {start_date_str} to {today_str}...")
     try:
         session.get(BASE_URL, timeout=15)
         time.sleep(2)
-        api_url = f"{BASE_URL}/api/corporate-announcements?index=equities&from_date={today_str}&to_date={today_str}"
+        # Use the widened date range in the API URL
+        api_url = f"{BASE_URL}/api/corporate-announcements?index=equities&from_date={start_date_str}&to_date={today_str}"
         data = session.get(api_url, timeout=15).json()
     except Exception as e:
         print(f"[ERROR] API or Fetch failed: {e}")
@@ -212,6 +220,7 @@ def run_ingestion():
                 if not safe_filename.lower().endswith('.pdf'): safe_filename += ".pdf"
                 filepath = os.path.join(download_dir, f"{symbol}_{safe_filename}")
                 
+                # Check DB to prevent re-downloading files we already got 1 or 2 days ago
                 cursor.execute('SELECT 1 FROM report_pipeline WHERE filepath = ?', (filepath,))
                 if cursor.fetchone(): continue 
                 
