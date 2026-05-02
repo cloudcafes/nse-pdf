@@ -40,12 +40,11 @@ def process_batch_results(job_info, conn):
     cursor = conn.cursor()
     
     try:
-        # ---> FIX: Extract the file identifier dynamically (Developer API spec)
         output_file_name = job_info.dest.file_name
         print(f"[POLL] Downloading results from internal File API: {output_file_name}...")
         
-        # ---> FIX: Use the native files.download method
-        response_bytes = client.files.download(name=output_file_name)
+        # ---> FIX APPLIED HERE: Changed 'name=' to 'file=' to match GenAI SDK spec
+        response_bytes = client.files.download(file=output_file_name)
         results_text = response_bytes.decode("utf-8")
             
         for line in results_text.splitlines():
@@ -101,7 +100,7 @@ def check_active_batches():
             try:
                 job_info = client.batches.get(name=job_id)
                 
-                # ---> FIX: Ensure safe string comparison for the JobState Enum
+                # Safe string comparison for the JobState Enum
                 current_state_name = job_info.state.name if hasattr(job_info.state, 'name') else str(job_info.state)
                 print(f"  -> API State: {current_state_name}")
                 
