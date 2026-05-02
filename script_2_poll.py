@@ -3,7 +3,6 @@ import sqlite3
 import json
 import time
 import requests
-import urllib.request
 from google import genai 
 
 # ==============================
@@ -39,17 +38,15 @@ def send_telegram_message(content):
 
 def process_batch_results(job_info, conn):
     cursor = conn.cursor()
-    output_uri = job_info.output_uri
     
-    print(f"[POLL] Downloading results from {output_uri}...")
     try:
-        # Handles generic HTTP URIs or native Developer API File identifiers
-        if output_uri.startswith("http"):
-            response = urllib.request.urlopen(output_uri)
-            results_text = response.read().decode("utf-8")
-        else:
-            response_bytes = client.files.download(name=output_uri)
-            results_text = response_bytes.decode("utf-8")
+        # ---> FIX: Extract the file identifier dynamically (Developer API spec)
+        output_file_name = job_info.dest.file_name
+        print(f"[POLL] Downloading results from internal File API: {output_file_name}...")
+        
+        # ---> FIX: Use the native files.download method
+        response_bytes = client.files.download(name=output_file_name)
+        results_text = response_bytes.decode("utf-8")
             
         for line in results_text.splitlines():
             if not line.strip(): continue
@@ -74,7 +71,7 @@ def process_batch_results(job_info, conn):
                 # Typically hits here if the prompt was flagged by API safety filters
                 cursor.execute("UPDATE report_pipeline SET llm_status = 'FAILED', llm_summary = 'Blocked/Empty Response' WHERE filepath = ?", (filepath,))
                 
-        # Close out the job loop
+        # Close out the job loop so it is never checked again
         cursor.execute("UPDATE active_batches SET status = 'COMPLETED' WHERE job_id = ?", (job_info.name,))
         conn.commit()
         print("[SUCCESS] Database updated and relevant alerts dispatched.")
@@ -103,15 +100,17 @@ def check_active_batches():
             print(f"\n[POLL] Checking status for job: {job_id}")
             try:
                 job_info = client.batches.get(name=job_id)
-                current_state = job_info.state
-                print(f"  -> API State: {current_state}")
                 
-                if current_state == "JOB_STATE_SUCCEEDED":
+                # ---> FIX: Ensure safe string comparison for the JobState Enum
+                current_state_name = job_info.state.name if hasattr(job_info.state, 'name') else str(job_info.state)
+                print(f"  -> API State: {current_state_name}")
+                
+                if current_state_name == "JOB_STATE_SUCCEEDED":
                     process_batch_results(job_info, conn)
-                elif current_state in ("JOB_STATE_FAILED", "JOB_STATE_CANCELLED", "JOB_STATE_EXPIRED"):
+                elif current_state_name in ("JOB_STATE_FAILED", "JOB_STATE_CANCELLED", "JOB_STATE_EXPIRED"):
                     print(f"  -> [!] Job {job_id} terminated unproductively.")
-                    cursor.execute("UPDATE active_batches SET status = ? WHERE job_id = ?", (current_state, job_id))
-                    cursor.execute("UPDATE report_pipeline SET llm_status = ? WHERE batch_job_id = ?", (current_state, job_id))
+                    cursor.execute("UPDATE active_batches SET status = ? WHERE job_id = ?", (current_state_name, job_id))
+                    cursor.execute("UPDATE report_pipeline SET llm_status = ? WHERE batch_job_id = ?", (current_state_name, job_id))
                     conn.commit()
                     
             except Exception as e:
