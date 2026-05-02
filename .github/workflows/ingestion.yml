@@ -1,16 +1,16 @@
-name: Gemini Batch Polling & Alerts
+name: Data Ingestion & Batch Submission
 
 on:
   schedule:
-    # Runs at minutes 5, 20, 35, and 50 past the hour, every hour, every day
-    - cron: '5,20,35,50 * * * *'
+    # Runs at 10:30 UTC (4:00 PM IST) Monday through Friday
+    - cron: '30 10 * * 1-5'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  execute-polling:
+  execute-ingestion:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,17 +31,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Polling Script
+      - name: Run Ingestion Script
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          python script_2_poll.py
+          python script_1_ingest.py
 
       - name: Commit and Push Database State
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "🤖 chore(db): update batch polling status and alerts"
+          commit_message: "🤖 chore(db): track new batch job submission"
           file_pattern: 'nse_pipeline.db'
           skip_dirty_check: false
